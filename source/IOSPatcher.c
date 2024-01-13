@@ -263,6 +263,29 @@ int patch_Kill_AntiSysTitleInstall(u8 *buf, u32 size)
 	return match_count;
 }
 
+int patch_drive_inquiry(u8 *buf, u32 size)
+{
+	u32 i;
+	u32 match_count = 0;
+	u8 original[] = {0x49, 0x4C, 0x23, 0x90, 0x68, 0x0A};
+	u8 patch[] = {
+		0x20, 0x00, // movs r0, #0
+		0xE5, 0x38, // b #-0x58C
+	};
+
+	for (i=0; i<size-sizeof(original); i++) 
+	{
+		if (!memcmp(buf + i, original, sizeof(original))) 
+		{
+			memcpy(buf + i, patch, sizeof(patch));
+			i += sizeof(patch);
+			match_count++;
+			continue;
+		}
+	}
+	return match_count;
+}
+
 void display_tag(u8 *buf) 
 {
 	printf("Firmware version: %s      Builder: %s\n", buf, buf+0x30);
@@ -870,7 +893,7 @@ s32 install_unpatched_IOS(u32 iosversion, u32 revision, bool free)
 	return 0;
 }
 
-s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool es_identify_patch, bool nand_patch, bool version_patch, bool Kill_AntiSysTitleInstall_patch, u32 location, u32 newrevision, bool free)
+s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool es_identify_patch, bool nand_patch, bool version_patch, bool Kill_AntiSysTitleInstall_patch, bool drive_inquiry_patch, u32 location, u32 newrevision, bool free)
 {
 	int ret;
 	if (iosnr == location && iosrevision == newrevision && !es_trucha_patch && !es_identify_patch && !nand_patch && !Kill_AntiSysTitleInstall_patch)
@@ -944,8 +967,40 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 			systitle = patch_Kill_AntiSysTitleInstall(ios->decrypted_buffer[index], ios->buffer_size[index]);
 			printf("patch applied %u time(s)\n", systitle);
 		}
-		
+
 		if (trucha > 0 || identify > 0 || nand > 0 || version > 0 || systitle > 0)
+		{
+			// Force the patched module to be not shared
+			tmd_content *content = &p_tmd->contents[index];
+			content->type = 1;
+
+			// Update the content hash inside the tmd
+			sha1 hash;
+			SHA1(ios->decrypted_buffer[index], (u32)p_cr[index].size, hash);
+			memcpy(p_cr[index].hash, hash, sizeof hash);
+			tmd_dirty = true;
+		}
+	}
+
+	if (drive_inquiry_patch)
+	{
+		index = module_index(ios, "DIP:");
+		if (index < 0)
+		{
+			printf("Could not identify DIP module\n");
+			free_IOS(&ios);
+			return -1;
+		}
+		int drive = 0;
+
+		if (drive_inquiry_patch)
+		{
+			printf("Patching drive inquiry in DIP module(#%u)...", index);
+			drive = patch_drive_inquiry(ios->decrypted_buffer[index], ios->buffer_size[index]);
+			printf("patch applied %u time(s)\n", drive);
+		}
+
+		if (drive > 0)
 		{
 			// Force the patched module to be not shared
 			tmd_content *content = &p_tmd->contents[index];

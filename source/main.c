@@ -61,7 +61,8 @@ int main(int argc, char* argv[])
 	printf("The app was quite a simple job, built upon their actual real work.\n");
 	printf("App made by Dr Clipper/Davebaol, then automated by ZRicky11.\n");
 	printf("Wii U's vWii IOS support added by damysteryman.\n");
-	printf("Usage of the internal NAND IOS80 added by FIX94.\n \n");
+	printf("Usage of the internal NAND IOS80 added by FIX94.\n");
+	printf("Drive Inquiry patch added by GaryOderNichts.\n \n");
 	printf("This Patched IOS80 installer is for Wii U's vWii ONLY!\nUsing this in a regular Wii will result in a broken IOS80, which will\ncause a brick if you have System menu 4.3 installed!\n");
 	printf("REQUIRES either: vWii IOS80 v7200 wad located at SD:/IOS80-64-v7200.wad!\n(It is not avaible on NUS, must dump from a vWii or acquire elsewhere)\n...Or IOS80 v7200 already installed on vWii.\n\n");
 
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
 	waitforbuttonpress(NULL, NULL);
 
 	printf("About to install IOS80\n");
-	ret = Install_patched_IOS(80, IOS80version, true, false, false, false, false, 80, IOS80version, false);
+	ret = Install_patched_IOS(80, IOS80version, true, false, false, false, false, true, 80, IOS80version, false);
 
 	ISFS_Deinitialize();
 	if (ret < 0) {
